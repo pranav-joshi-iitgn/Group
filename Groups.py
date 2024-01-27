@@ -291,7 +291,7 @@ class Group:
         L = [i for i in range(n) if visited[i]]
         xtoG = R.generate(L)
         return xtoG
-    def MinimalNormalSubGroup(self):
+    def MinimumNormalSubGroup(self):
         R = self.R
         T = R.T
         n = T.shape[0]
@@ -351,4 +351,5 @@ def AdditiveGroupOnIntegersModulo(n):
         for i in range(n)
     ])
     names = [str(i) for i in range(n)]
-    return Group(T,names)
+    R = Relation(T,names)
+    return Group(R)
