@@ -16,12 +16,24 @@ class Relation:
         
         self.T = T
         self.Elements = Elements
-        self.calculate_properties()
+        if calculate:
+            self.calculate_properties()
 
     def __getitem__(self,i):
         return self.Elements[i]
     def __repr__(self) -> str:
-        return "Relation("+",".join([str(el) for el in self.Elements])+")"
+        s = "\t  "
+        for name in self.Elements:
+            s += str(name) + '\t'
+        s += "\n\t  "
+        for name in self.Elements:
+            s += '-'*(len(str(name))+4) + '\t'
+        i = 0
+        for name in self.Elements:
+            s += "\n"+str(name)+'\t'+"| "
+            for j in range(self.T.shape[0]):
+                s += str(self.T[i][j]) + '\t'
+        return s
     def Element(self,i):
         return Element(self,i)
     def calculate_properties(self):
