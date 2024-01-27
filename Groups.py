@@ -306,6 +306,11 @@ class Group:
                 min_l = l
                 min_N = N
         return min_N
+    
+    def is_simple(self):
+        if self.MinimumNormalSubGroup() == self:
+            return True
+        return False
 
 class Coset:
     """
