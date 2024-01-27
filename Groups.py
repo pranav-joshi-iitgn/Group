@@ -30,6 +30,26 @@ class Relation:
             print("Relation doesn't have an identity")
             return
         self.inv_ind = get_inverses(self,id)
+    def generate(self,generators):
+        T=self.T
+        n = T.shape[0]
+        visited = [False]*n
+        visited[self.identity_ind] = True
+        for g in generators:
+            while True:
+                changes = 0
+                for x in range(n):
+                    if not visited[x]:
+                        continue
+                    gx = T[g][x]
+                    if not visited[gx]:
+                        visited[gx] = True 
+                        changes += 1
+                if not changes:
+                    break
+        L = [i for i in range(n) if visited[i]]
+        G = Group(self,L)
+        return G
 
 class Element:
     def __init__(self,R:Relation,i:int) -> None:
@@ -250,6 +270,42 @@ class Group:
         M = array(M)
         Rnew = Relation(M,cosets)
         return Group(Rnew)
+    def normal_closure(self,xL):
+        if not iterable(xL):
+            xL = [xL]
+        R = self.R
+        T = R.T
+        n = T.shape[0]
+        visited = [False]*n
+        for x in xL:
+            found = False
+            for i in range(len(self.ElInd)):
+                g = self.ElInd[i]
+                g_inv = self.inv_ind[i]
+                if g==x:
+                    found = True
+                xg = T[x][g]
+                gixg = T[g_inv][xg]
+                visited[gixg] = True
+            assert found, str((x,g))
+        L = [i for i in range(n) if visited[i]]
+        xtoG = R.generate(L)
+        return xtoG
+    def MinimalNormalSubGroup(self):
+        R = self.R
+        T = R.T
+        n = T.shape[0]
+        min_l = len(self.ElInd)
+        min_N = self
+        for x in self.ElInd:
+            if x == self.identity_ind:
+                continue
+            N = self.normal_closure(x)
+            l = len(N.ElInd)
+            if l < min_l:
+                min_l = l
+                min_N = N
+        return min_N
 
 class Coset:
     """
@@ -288,4 +344,11 @@ class Coset:
         return Coset(H,g3)
     def standardise(self):
         self.g_ind = min(self.expand())
-    
+
+def AdditiveGroupOnIntegersModulo(n):
+    T = array([
+        [(i+j)%n for j in range(n)]
+        for i in range(n)
+    ])
+    names = [str(i) for i in range(n)]
+    return Group(T,names)
