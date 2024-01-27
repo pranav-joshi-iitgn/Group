@@ -27,7 +27,7 @@ class Relation:
             s += str(name) + '\t'
         s += "\n\t  "
         for name in self.Elements:
-            s += '-'*(len(str(name))+4) + '\t'
+            s += '-'*len(str(name)) + '\t'
         i = 0
         for name in self.Elements:
             s += "\n"+str(name)+'\t'+"| "
@@ -399,7 +399,7 @@ class Group:
         GbyN = G/N
         if debug:
             print("G/N :",GbyN)
-        mingenGbyN = GbyN.MinimumGeneratingSet()
+        mingenGbyN = GbyN.MinimumGeneratingSet(debug)
         g = [(GbyN[i]).g_ind for i in mingenGbyN]
         if debug:
             print("g :",g)
@@ -502,4 +502,8 @@ def DihegralGroup(n):
 
 if __name__=='__main__':
     G = DihegralGroup(3)
-    print(G.MinimumGeneratingSet(True))
+    print("Relation :")
+    print(G.R,'\n')
+    g = G.MinimumGeneratingSet(True)
+    print("Output :",g)
+    print("Pretty Output :",[G.R[i] for i in g])
