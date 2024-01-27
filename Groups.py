@@ -306,6 +306,42 @@ class Group:
                 min_l = l
                 min_N = N
         return min_N
+    def MinimalGeneratingSet(self):
+        R = self.R
+        T=R.T
+        n = T.shape[0]
+        visited = [False]*n
+        visited[self.identity_ind] = True
+        generators = []
+        m = len(self.ElInd)
+        for g in self.ElInd:
+            if visited[g]:
+                continue
+            Changes = 0
+            while True:
+                changes = 0
+                for x in range(n):
+                    if not visited[x]:
+                        continue
+                    gx = T[g][x]
+                    if not visited[gx]:
+                        visited[gx] = True 
+                        changes += 1
+                Changes += changes
+                if not changes:
+                    break
+            if Changes:
+                generators.append(g)
+            done = True
+            for x in self.ElInd:
+                if not visited[x]:
+                    done = False
+                    break
+            if done:
+                break
+        L = [i for i in range(n) if visited[i]]
+        G = Group(self,L)
+        return G
     
     def is_simple(self):
         if self.MinimumNormalSubGroup() == self:
