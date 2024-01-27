@@ -342,6 +342,11 @@ class Group:
         L = [i for i in range(n) if visited[i]]
         G = Group(self,L)
         return G
+    
+    def is_simple(self):
+        if self.MinimumNormalSubGroup() == self:
+            return True
+        return False
 
 class Coset:
     """
