@@ -48,20 +48,23 @@ class Relation:
         n = T.shape[0]
         visited = [False]*n
         visited[self.identity_ind] = True
-        for g in generators:
-            while True:
-                changes = 0
-                for x in range(n):
-                    if not visited[x]:
-                        continue
+        while True:
+            changes = 0
+            for x in range(n):
+                if not visited[x]:
+                    continue
+                for g in generators:
                     gx = T[g][x]
                     if not visited[gx]:
                         visited[gx] = True 
                         changes += 1
-                if not changes:
-                    break
+            if not changes:
+                break
         L = [i for i in range(n) if visited[i]]
-        G = Group(self,L)
+        try:
+            G = Group(self,L)
+        except:
+            raise TypeError("Can't make a group from"+str(L)+"generated from"+str(generators))
         return G
 
 class Element:
@@ -358,6 +361,78 @@ class Group:
         if self.MinimumNormalSubGroup() == self:
             return True
         return False
+    
+    def is_abelian(self):
+        return is_commutative(self.R,self.ElInd)
+
+    def has_generating_set(self,generating_set):
+        G = self.R.generate(generating_set)
+        return self==G
+    
+    def __len__(self):
+        return len(self.ElInd)
+
+    def explode(self,gL,t)->list:
+        if t==0:
+            return [gL]
+        old = self.explode(gL[1:],t-1)
+        gN = Coset(self,gL[0])
+        gNL = gN.expand()
+        new = old.copy()
+        for c in old:
+            new.extend([([gn]+c) for gn in gNL if ((gn not in c) and (gn != self.identity_ind))])
+        return new
+
+    def MinimumGeneratingSet(self,debug=False):
+        if debug:
+            print("Finding minimum generating set for",self)
+        T = self.R.T
+        N = self.MinimumNormalSubGroup()
+        if debug:
+            print("N :",N)
+        if self==N:
+            return self.MinimalGeneratingSet()
+        n = N.MinimalGeneratingSet()
+        if debug:
+            print("n :",n)
+        m = len(n)
+        GbyN = G/N
+        if debug:
+            print("G/N :",GbyN)
+        mingenGbyN = GbyN.MinimumGeneratingSet()
+        g = [(GbyN[i]).g_ind for i in mingenGbyN]
+        if debug:
+            print("g :",g)
+        l = len(g)
+        if N.is_abelian():
+            if debug:
+                print("N is abelian.")
+            proceed = not G.has_generating_set(g)
+            for i in range(l):
+                for j in range(m):
+                    modified_g = g[:i]+[T[g[i]][n[j]]]+g[i+1:]
+                    proceed = proceed and not G.has_generating_set(modified_g)
+            if proceed:
+                for i in N.ElInd:
+                    if N.identity_ind != i:
+                        return g + [i]
+            else:
+                print("idk wat to do now.")
+        else:
+            t = 13/5 + log(len(G))/log(len(N))
+            if debug:
+                print("N is not abelian")
+                print("t = ",t,'l = ',l)
+            if t<= l:
+                for candidate_gen in N.explode(g,t):
+                    if G.has_generating_set(candidate_gen):
+                        return candidate_gen
+            else:
+                for candidate_gen0 in N.explode(g,l):
+                    for nl in N:
+                        candidate_gen = candidate_gen0 + [nl]
+                        if G.has_generating_set(candidate_gen):
+                            return candidate_gen
 
 class Coset:
     """
@@ -427,9 +502,4 @@ def DihegralGroup(n):
 
 if __name__=='__main__':
     G = DihegralGroup(3)
-    print(G.R)
-    print("G :",G)
-    N = G.MinimumNormalSubGroup()
-    print("N :",N)
-    GbyN = G/N
-    print("GbyN :",GbyN)
+    print(G.MinimumGeneratingSet(True))
