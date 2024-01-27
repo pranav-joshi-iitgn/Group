@@ -32,7 +32,8 @@ class Relation:
         for name in self.Elements:
             s += "\n"+str(name)+'\t'+"| "
             for j in range(self.T.shape[0]):
-                s += str(self.T[i][j]) + '\t'
+                s += str(self.Elements[self.T[i][j]]) + '\t'
+            i += 1
         return s
     def Element(self,i):
         return Element(self,i)
@@ -41,7 +42,7 @@ class Relation:
         if self.identity_ind is None:
             print("Relation doesn't have an identity")
             return
-        self.inv_ind = get_inverses(self,id)
+        self.inv_ind = get_inverses(self,self.identity_ind)
     def generate(self,generators):
         T=self.T
         n = T.shape[0]
@@ -404,3 +405,31 @@ def AdditiveGroupOnIntegersModulo(n):
     names = [str(i) for i in range(n)]
     R = Relation(T,names)
     return Group(R)
+
+def DihegralGroup(n):
+    names = ['e']+[f'r^{i}' for i in range(1,n)] + ['s']+[f'sr^{i}' for i in range(1,n)]
+    T = [[None]*(2*n) for _ in range(2*n)]
+    for i in range(2*n):
+        for j in range(2*n):
+            if i<n and j<n:
+                T[i][j] = (i+j)%n
+            elif i>=n and j<n:
+                T[i][j] = n+(i+j)%n
+            elif i<n and j>=n:
+                T[i][j] = n+(n-i+j)%n
+            elif i>=n and j>=n:
+                T[i][j] = (n-i+j)%n
+    for row in T:
+        assert None not in row, str(T)
+    T = array(T,dtype=int32)
+    R = Relation(T,names,True)
+    return Group(R)
+
+if __name__=='__main__':
+    G = DihegralGroup(3)
+    print(G.R)
+    print("G :",G)
+    N = G.MinimumNormalSubGroup()
+    print("N :",N)
+    GbyN = G/N
+    print("GbyN :",GbyN)
