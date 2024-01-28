@@ -106,4 +106,4 @@ Pretty Output : [1023],[0231]
 
 Upon Running the complexity analysis in the `Groups.ipynb` notebook, these are the results:
 
-![Image](MinGenSet.png)
+![Image](MinGenSetDihedral.png)
