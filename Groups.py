@@ -425,15 +425,15 @@ class Group:
         if N.is_abelian():
             if debug:
                 print("N is abelian.")
-            proceed = not G.has_generating_set(g)
+            #proceed = not G.has_generating_set(g)
             for i in range(l):
                 for j in range(m):
                     modified_g = g[:i]+[T[g[i]][n[j]]]+g[i+1:]
-                    proceed = proceed and not G.has_generating_set(modified_g)
-            if proceed:
-                for i in N.ElInd:
-                    if N.identity_ind != i:
-                        return g + [i]
+                    if G.has_generating_set(modified_g):
+                        return modified_g
+            for i in N.ElInd:
+                if N.identity_ind != i:
+                    return g + [i]
             else:
                 print("idk wat to do now.")
         else:
@@ -599,7 +599,8 @@ if __name__=='__main__':
     print(G.R,'\n')
     g = G.MinimumGeneratingSet(True)
     print("Output :",g)
-    print("Pretty Output :",",".join([str(G.R[i]) for i in g]))
+    if g is not None:
+        print("Pretty Output :",",".join([str(G.R[i]) for i in g]))
 
     print('\n\n')
 
@@ -608,3 +609,5 @@ if __name__=='__main__':
     print(G.R)
     g = G.MinimumGeneratingSet(True)
     print("Output :",g)
+    if g is not None:
+        print("Pretty Output :",",".join([str(G.R[i]) for i in g]))
