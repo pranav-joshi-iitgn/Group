@@ -96,6 +96,6 @@ N is abelian.
 g :
  [1, 3]
 N is abelian.
-idk wat to do now.
-Output : None
+Output : [6, 3]
+Pretty Output : [1023],[0231]
 ```
