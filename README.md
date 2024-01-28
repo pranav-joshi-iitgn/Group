@@ -1,5 +1,7 @@
 This is a coustom made group theory library to implement the first method to find the minumum generating set of a group in polynomial time. 
 
+### Test Case
+
 Output upon running the test case:
 ```
 Relation :
@@ -99,3 +101,9 @@ N is abelian.
 Output : [6, 3]
 Pretty Output : [1023],[0231]
 ```
+
+### Complexity Analysis
+
+Upon Running the complexity analysis in the `Groups.ipynb` notebook, these are the results:
+
+![Image](MinGenSet.png)
