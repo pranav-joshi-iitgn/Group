@@ -19,6 +19,17 @@ class Relation:
         self.Elements = Elements
         if calculate:
             self.calculate_properties()
+            self.calculated = True
+        else:
+            self.calculated = False
+    def inverses(self,ElId):
+        if not self.calculated:
+            self.calculate_properties()
+        inv = [None]*len(ElId)
+        for i in range(len(ElId)):
+            x = ElId[i]
+            inv[i] = self.inv_ind[x]
+        return inv
 
     def __getitem__(self,i):
         return self.Elements[i]
@@ -46,7 +57,7 @@ class Relation:
             print("Relation doesn't have an identity")
             return
         self.inv_ind = get_inverses(self,self.identity_ind)
-    def generate(self,generators):
+    def generate(self,generators,check=True):
         T=self.T
         n = T.shape[0]
         visited = [False]*n
@@ -57,7 +68,10 @@ class Relation:
                 if not visited[x]:
                     continue
                 for g in generators:
-                    gx = T[g][x]
+                    try:
+                        gx = T[g][x]
+                    except:
+                        raise TypeError(f"g={g},x={x}")
                     if not visited[gx]:
                         visited[gx] = True 
                         changes += 1
@@ -65,7 +79,7 @@ class Relation:
                 break
         L = [i for i in range(n) if visited[i]]
         try:
-            G = Group(self,L)
+            G = Group(self,L,check)
         except:
             raise TypeError("Can't make a group from"+str(L)+"generated from"+str(generators))
         return G
@@ -155,19 +169,21 @@ class Group:
             ElInd = list(range(n))
         self.ElInd = ElInd
         self.R = R
-        if not check:
-            return
-        id = get_identity(R,ElInd)
+        if not R.calculated:
+            R.calculate_properties()
+        id = R.identity_ind
         if id is None:
             raise TypeError("The relation doesn't have an identity element")
-        if not is_associative(R,ElInd):
-            raise TypeError("The relation provided isn't associative")
-        inv = get_inverses(R,id,ElInd)
+        inv = R.inverses(ElInd)
         assert len(inv) == len(ElInd)
         if None in inv:
-            raise TypeError("An element doesn't have it's inverse.")
-        if contains_duplicates(inv):
-            raise TypeError("Two elements have the same inverses")
+                raise TypeError("An element doesn't have it's inverse.")
+        if check:
+            if not is_associative(R,ElInd):
+                raise TypeError("The relation provided isn't associative")
+            #inv = get_inverses(R,id,ElInd)
+            if contains_duplicates(inv):
+                raise TypeError("Two elements have the same inverses")
         self.identity_ind = id
         self.inv_ind = inv
     def perform_checks(self):
@@ -322,12 +338,12 @@ class Group:
                 visited[gixg] = True
             assert found, str((x,g))
         L = [i for i in range(n) if visited[i]]
-        xtoG = R.generate(L)
+        xtoG = R.generate(L,False)
         return xtoG
     def MinimumNormalSubGroup(self):
         R = self.R
         T = R.T
-        n = T.shape[0]
+        #n = T.shape[0]
         min_l = len(self.ElInd)
         min_N = self
         for x in self.ElInd:
@@ -339,6 +355,37 @@ class Group:
                 min_l = l
                 min_N = N
         return min_N
+    
+    def MinimalNormalSubGroup(self):
+        R = self.R
+        T = R.T
+        n = T.shape[0]
+        visited = [False]*n
+        visited[self.identity_ind] = True
+        ToDo = self.ElInd
+        N = self
+        while True:
+            for x in ToDo:
+                if visited[x]:
+                    continue
+                N = self.normal_closure([x])
+                ToDoNew = N.ElInd
+                visited[x] = True
+                sam = (len(ToDo) == len(ToDoNew))
+                #sam = True
+                #for i in range(n):
+                #    same[i] = False
+                #for el in ToDoNew:
+                #    same[el] = True
+                #for el in ToDo:
+                #    if not same[el]:
+                #        sam = False
+                #        break
+                if not sam:
+                    ToDo = ToDoNew
+                    break
+            return N
+
         
     def MinimalGeneratingSet(self)->list:
         R = self.R
@@ -405,7 +452,7 @@ class Group:
         if debug:
             print("Finding minimum generating set for :\n",self)
         T = G.R.T
-        N = G.MinimumNormalSubGroup()
+        N = G.MinimalNormalSubGroup()
         if debug:
             print("N :\n",N)
         if G==N:
@@ -429,11 +476,15 @@ class Group:
             for i in range(l):
                 for j in range(m):
                     modified_g = g[:i]+[T[g[i]][n[j]]]+g[i+1:]
+                    for el in modified_g:
+                        assert (isinstance(el,int) or isinstance(el,int32)),modified_g
                     if G.has_generating_set(modified_g):
                         return modified_g
             for i in N.ElInd:
                 if N.identity_ind != i:
                     return g + [i]
+            else:
+                print("idk wat to do now.")
         else:
             t = 13/5 + log(len(G))/log(len(N))
             if debug:
@@ -445,7 +496,7 @@ class Group:
                         return candidate_gen
             else:
                 for candidate_gen0 in N.explode(g,l):
-                    for nl in N:
+                    for nl in N.ElInd:
                         candidate_gen = candidate_gen0 + [nl]
                         if G.has_generating_set(candidate_gen):
                             return candidate_gen
@@ -571,19 +622,25 @@ def multiplyPermutations(x,y):
     return z
 
 def PermutationGroup(n):
+    """
+    generates S(n)
+    """
     facts = [None]*n
     facts[0] = 1
     for i in range(1,n):
         facts[i] = i*facts[i-1]
     P = generatePermuations(n)
+    P = [tuple(x) for x in P]
     l = len(P)
+    D = {P[i]:i for i in range(l)}
     T = [[None]*l for _ in range(l)]
     for i in range(l):
         for j in range(l):
             x = P[i]
             y = P[j]
             z = multiplyPermutations(x,y)
-            zind = perutationIndex(z,facts)
+            #zind = perutationIndex(z,facts)
+            zind = D[z]
             T[i][j] = zind
     T = array(T)
     R = Relation(T,["["+"".join([str(x) for x in p])+']' for p in P])
