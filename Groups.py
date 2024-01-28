@@ -434,8 +434,6 @@ class Group:
             for i in N.ElInd:
                 if N.identity_ind != i:
                     return g + [i]
-            else:
-                print("idk wat to do now.")
         else:
             t = 13/5 + log(len(G))/log(len(N))
             if debug:
