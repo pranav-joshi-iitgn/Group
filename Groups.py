@@ -1,7 +1,8 @@
 from numpy import *
 
 class Relation:
-    def __init__(self,T:ndarray,Elements=None,calculate=True) -> None:
+    def __init__(self,T:ndarray,Elements=None,calculate=True,level=1) -> None:
+        self.level = level
         if Elements is None:
             Elements = [f"x_{i}" for i in range(T.shape[0])]
         if T.dtype != int32:
@@ -22,15 +23,17 @@ class Relation:
     def __getitem__(self,i):
         return self.Elements[i]
     def __repr__(self) -> str:
-        s = "\t  "
+        if sum([len(str(name)) for name in self.Elements]) > 100:
+            return "Relation("+",".join([str(name) for name in self.Elements])+")"
+        s = " "*max([len(str(name)) for name in self.Elements])+"\t   "
         for name in self.Elements:
             s += str(name) + '\t'
-        s += "\n\t  "
+        s += "\n"+" "*max([len(str(name)) for name in self.Elements])+"\t   "
         for name in self.Elements:
             s += '-'*len(str(name)) + '\t'
         i = 0
         for name in self.Elements:
-            s += "\n"+str(name)+'\t'+"| "
+            s += "\n"+str(name)+"\t|  "
             for j in range(self.T.shape[0]):
                 s += str(self.Elements[self.T[i][j]]) + '\t'
             i += 1
@@ -145,6 +148,7 @@ def is_commutative(R:Relation,ElInd=None):
 
 class Group:
     def __init__(self,R:Relation,ElInd=None,check=True) -> None:
+        self.level = R.level
         T = R.T
         n = T.shape[0]
         if ElInd is None:
@@ -189,16 +193,26 @@ class Group:
     def __getitem__(self,i):
         return self.R.Elements[self.ElInd[i]]
     def __repr__(self) -> str:
-        return "Group("+",".join([str(self.R.Elements[i]) for i in self.ElInd])+")"
+        strEl = [str(self.R.Elements[i]) for i in self.ElInd]
+        l = sum([len(s) for s in strEl])
+        if l>100:
+            return "Group(\n"+",\n".join(strEl)+")"
+        return "Group("+",".join(strEl)+")"
     def Element(self,i):
         return Element(self.R,i)
-    def has_subgroup(self,H,check=False):
+    def has_subgroup(self,H,check=False,debug=True):
         if not isinstance(H,Group):
+            if debug:
+                print("Not a group")
             return False
         if self.R is not H.R:
+            if debug:
+                print("Working on different relations :",self.R.Elements,H.R.Elements,sep='\n')
             return False
         for h in H.ElInd:
             if h not in self.ElInd:
+                if debug:
+                    print("An element in H is not in G")
                 return False
         if check and not H.perform_checks():
             return False
@@ -267,6 +281,8 @@ class Group:
             return cosets,visited
         return cosets
     def __truediv__(self,N):
+        G = self
+        assert self.has_subgroup(N)
         assert self.has_normal_subgroup(N)
         cosets,division = self.Cosets(N,True)
         T = self.R.T
@@ -284,8 +300,9 @@ class Group:
             assert None not in row, str((row,g1))
             M.append(row)
         M = array(M)
-        Rnew = Relation(M,cosets)
-        return Group(Rnew)
+        Rnew = Relation(M,cosets,level=self.level+1)
+        GbyN = Group(Rnew)
+        return GbyN
     def normal_closure(self,xL):
         if not iterable(xL):
             xL = [xL]
@@ -384,25 +401,26 @@ class Group:
         return new
 
     def MinimumGeneratingSet(self,debug=False):
+        G = self
         if debug:
-            print("Finding minimum generating set for",self)
-        T = self.R.T
-        N = self.MinimumNormalSubGroup()
+            print("Finding minimum generating set for :\n",self)
+        T = G.R.T
+        N = G.MinimumNormalSubGroup()
         if debug:
-            print("N :",N)
-        if self==N:
+            print("N :\n",N)
+        if G==N:
             return self.MinimalGeneratingSet()
         n = N.MinimalGeneratingSet()
         if debug:
-            print("n :",n)
+            print("n :\n",n)
         m = len(n)
         GbyN = G/N
         if debug:
-            print("G/N :",GbyN)
+            print("G/N :\n",GbyN)
         mingenGbyN = GbyN.MinimumGeneratingSet(debug)
         g = [(GbyN[i]).g_ind for i in mingenGbyN]
         if debug:
-            print("g :",g)
+            print("g :\n",g)
         l = len(g)
         if N.is_abelian():
             if debug:
@@ -458,7 +476,10 @@ class Coset:
     def __repr__(self) -> str:
         H = self.H
         g = self.H.R[self.g_ind]
-        return str(g)+" * "+str(H)
+        sH = str(H)
+        if len(sH) > 20:
+            sH = f"Group[level={H.level}]"
+        return "("+str(g)+" * "+sH+")"
     def __mul__(self,other):
         assert isinstance(other,Coset),"Cosets can only be multiplied with cosets"
         assert other.H is self.H,"The cosets must have the same subgroup object (H) generating the"
@@ -500,10 +521,90 @@ def DihegralGroup(n):
     R = Relation(T,names,True)
     return Group(R)
 
+def generatePermuations(n):
+    """
+    Generates permutations of numbers 0,1,...n-1 in increasing lexicographical order
+    """
+    if n==0:
+        return []
+    if n==1:
+        return [[0]]
+    Lo = generatePermuations(n-1)
+    lo = len(Lo)
+    l = lo*n
+    L = [None]*l
+    for i in range(n):
+        for j in range(lo):
+            po = Lo[j]
+            p = [None]*n
+            p[0] = i
+            for r in range(1,n):
+                if po[r-1]>=i:
+                    p[r]=1+po[r-1]
+                else:
+                    p[r]=po[r-1]
+            assert None not in p
+            L[i*lo+j] = p
+
+    assert None not in L
+    return L
+
+def perutationIndex(p,facts):
+    """
+    facts is a list containing factorials of numbers 0,1,...n-1 where n = len(p)
+    """
+    p = p.copy()
+    n = len(p)
+    assert len(facts)==n
+    I = 0
+    for i in range(n):
+        x = p[i]
+        I += x*facts[n-1-i]
+        for j in range(i+1,n):
+            if p[j] > p[i]:
+                p[j] -= 1
+            elif p[j] == p[i]:
+                raise ValueError(str((p[j],p[i],j,i)))
+    return I
+
+def multiplyPermutations(x,y):
+    assert len(x) == len(y)
+    z = [y[i] for i in x]
+    return z
+
+def PermutationGroup(n):
+    facts = [None]*n
+    facts[0] = 1
+    for i in range(1,n):
+        facts[i] = i*facts[i-1]
+    P = generatePermuations(n)
+    l = len(P)
+    T = [[None]*l for _ in range(l)]
+    for i in range(l):
+        for j in range(l):
+            x = P[i]
+            y = P[j]
+            z = multiplyPermutations(x,y)
+            zind = perutationIndex(z,facts)
+            T[i][j] = zind
+    T = array(T)
+    R = Relation(T,["["+"".join([str(x) for x in p])+']' for p in P])
+    G = Group(R)
+    return G
+
+
 if __name__=='__main__':
     G = DihegralGroup(3)
     print("Relation :")
     print(G.R,'\n')
     g = G.MinimumGeneratingSet(True)
     print("Output :",g)
-    print("Pretty Output :",[G.R[i] for i in g])
+    print("Pretty Output :",",".join([str(G.R[i]) for i in g]))
+
+    print('\n\n')
+
+    G = PermutationGroup(4)
+    print("Relation :")
+    print(G.R)
+    g = G.MinimumGeneratingSet(True)
+    print("Output :",g)
