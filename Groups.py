@@ -448,6 +448,34 @@ class Group:
             if done:
                 break
         return generators      
+    def order(self,i:int):
+        G = self
+        I = i
+        for o in range(1,len(G)+1):
+            if G.identity_ind == I:
+                return o
+            I = G.R.T[I][i]
+        print("Not good")
+    def cyclic_generator(G):
+        n = G.R.T.shape[0]
+        visited = [False]*n
+        visited[G.identity_ind] = True
+        for i in G.ElInd:
+            if visited[i]:
+                continue
+            I = i
+            broken = False
+            for o in range(1,len(G)):
+                visited[I] = True
+                if G.identity_ind == I:
+                    broken = True
+                    break
+                I = G.R.T[I][i]
+            if not broken:
+                return i
+        return None
+    def is_cyclic(self):
+        return (self.cyclic_generator is not None)
     def is_simple(self):
         if self.MinimumNormalSubGroup() == self:
             return True
@@ -469,15 +497,15 @@ class Group:
         for c in old:
             new.extend([([gn]+c) for gn in gNL if ((gn not in c) and (gn != self.identity_ind))])
         return new
-    def __pow__(G,n:int):
+    def __pow__(self,n:int):
         """
             Finding G^n via fast exponentiation
         """
-        L = [None]*(int(log(n))+1)
-        B = [None]*(int(log(n))+1)
-        L[0]=G
-        for i in range(len(L)):
-            L[i+1] = G.Cross(L[i]*L[i])
+        L = [None]*(int(log2(n))+1)
+        B = [None]*(int(log2(n))+1)
+        L[0]=self
+        for i in range(len(L)-1):
+            L[i+1] = L[i].Cross(L[i])
         G = None
         for i in range(len(B)):
             B[i] = n%2
@@ -486,7 +514,7 @@ class Group:
                 if G is None:
                     G = L[i]
                 else:
-                    G = G.Cross(G,L[i])
+                    G = G.Cross(L[i])
         return G    
     def Cross(G1,G2):
         R1 = G1.R
@@ -509,8 +537,17 @@ class Group:
         return G
     def MinimumGeneratingSet(self,debug=False):
         G = self
+        if len(G) == 1:
+            if debug:
+                print("G has only identity")
+            return []
         if debug:
             print("Finding minimum generating set for :\n",self)
+        g = G.cyclic_generator()
+        if g is not None:
+            if debug:
+                print("G is cyclic")
+            return [g]
         T = G.R.T
         N = G.MinimalNormalSubGroup()
         if debug:
