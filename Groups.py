@@ -30,7 +30,6 @@ class Relation:
             x = ElId[i]
             inv[i] = self.inv_ind[x]
         return inv
-
     def __getitem__(self,i):
         return self.Elements[i]
     def __repr__(self) -> str:
@@ -83,6 +82,42 @@ class Relation:
         except:
             raise TypeError("Can't make a group from"+str(L)+"generated from"+str(generators))
         return G
+    def __mul__(R1,R2):
+        T1 = R1.T
+        T2 = R2.T
+        E1 = R1.Elements
+        E2 = R2.Elements
+        n1 = len(E1)
+        n2 = len(E2)
+        E = [None]*(n1*n2)
+        for i in range(n1):
+            for j in range(n2):
+                x = E1[i]
+                y = E2[j]
+                if isinstance(x,tuple):
+                    if isinstance(y,tuple):
+                        z = x + y
+                    else:
+                        z = x + (y,)
+                else:
+                    if isinstance(y,tuple):
+                        z = (x,) + y
+                    else:
+                        z = (x,y)
+                E[n2*i+j] = z
+        n = len(E)
+        T = [[None]*n for _ in range(n)]
+        for i in range(n):
+            for j in range(n):
+                ai,bi = i//n2,i%n2
+                aj,bj = j//n2,j%n2
+                ak = T1[ai][aj]
+                bk = T2[bi][bj]
+                k = ak*n2 + bk
+                T[i][j] = k
+        T = array(T)
+        R = Relation(T,E)
+        return R
 
 class Element:
     def __init__(self,R:Relation,i:int) -> None:
@@ -97,7 +132,7 @@ class Element:
         ind = self.R.T[self.i][other.i]
         return Element(self.R,ind)
 
-def get_identity(R:Relation,ElInd=None):
+def get_identity(R:Relation,ElInd=None)->bool:
     T = R.T
     n = T.shape[0]
     if ElInd is None:
@@ -111,9 +146,8 @@ def get_identity(R:Relation,ElInd=None):
                 break
         if is_x_e:
             return x
-    return None
-    
-def is_associative(R:Relation,ElInd=None):
+    return None    
+def is_associative(R:Relation,ElInd=None)->bool:
     T = R.T
     n = T.shape[0]
     if ElInd is None:
@@ -128,8 +162,7 @@ def is_associative(R:Relation,ElInd=None):
                 if x_yz != xy_z:
                     return False
     return True
-
-def get_inverses(R:Relation,identity_ind,ElInd=None)->list:
+def get_inverses(R:Relation,identity_ind:int,ElInd=None)->list:
     T= R.T
     n = T.shape[0]
     if ElInd is None:
@@ -143,16 +176,14 @@ def get_inverses(R:Relation,identity_ind,ElInd=None)->list:
                 inverses[i] = y
                 break
     return inverses
-
-def contains_duplicates(L):
+def contains_duplicates(L)->bool:
     n = len(L)
     for i in range(n):
         for j in range(i):
             if L[i] == L[j]:
                 return True
     return False
-
-def is_commutative(R:Relation,ElInd=None):
+def is_commutative(R:Relation,ElInd=None)->bool:
     T = R.T
     n = T.shape[0]
     if ElInd is None:
@@ -355,7 +386,6 @@ class Group:
                 min_l = l
                 min_N = N
         return min_N
-    
     def MinimalNormalSubGroup(self):
         R = self.R
         T = R.T
@@ -384,9 +414,7 @@ class Group:
                 if not sam:
                     ToDo = ToDoNew
                     break
-            return N
-
-        
+            return N      
     def MinimalGeneratingSet(self)->list:
         R = self.R
         T=R.T
@@ -419,23 +447,18 @@ class Group:
                     break
             if done:
                 break
-        return generators
-        
+        return generators      
     def is_simple(self):
         if self.MinimumNormalSubGroup() == self:
             return True
-        return False
-    
+        return False  
     def is_abelian(self):
         return is_commutative(self.R,self.ElInd)
-
     def has_generating_set(self,generating_set):
         G = self.R.generate(generating_set)
-        return self==G
-    
+        return self==G 
     def __len__(self):
         return len(self.ElInd)
-
     def explode(self,gL,t)->list:
         if t==0:
             return [gL]
@@ -446,7 +469,44 @@ class Group:
         for c in old:
             new.extend([([gn]+c) for gn in gNL if ((gn not in c) and (gn != self.identity_ind))])
         return new
-
+    def __pow__(G,n:int):
+        """
+            Finding G^n via fast exponentiation
+        """
+        L = [None]*(int(log(n))+1)
+        B = [None]*(int(log(n))+1)
+        L[0]=G
+        for i in range(len(L)):
+            L[i+1] = G.Cross(L[i]*L[i])
+        G = None
+        for i in range(len(B)):
+            B[i] = n%2
+            n = n//2
+            if B[i]:
+                if G is None:
+                    G = L[i]
+                else:
+                    G = G.Cross(G,L[i])
+        return G    
+    def Cross(G1,G2):
+        R1 = G1.R
+        R2 = G2.R
+        R = R1*R2
+        E1 = G1.ElInd
+        E2 = G2.ElInd
+        n1 = R1.T.shape[0]
+        n2 = R2.T.shape[0]
+        l1 = len(E1)
+        l2 = len(E2)
+        E = [None]*(l1*l2)
+        for i in range(l1):
+            for j in range(l2):
+                x = E1[i]
+                y = E2[j]
+                z = x*n2 + y
+                E[i*l2+j] = z
+        G = Group(R,E)
+        return G
     def MinimumGeneratingSet(self,debug=False):
         G = self
         if debug:
@@ -456,7 +516,20 @@ class Group:
         if debug:
             print("N :\n",N)
         if G==N:
-            return self.MinimalGeneratingSet()
+            for x in G.ElInd:
+                if x==G.identity_ind:
+                    continue
+                if G.has_generating_set([x]):
+                    return [x]
+            for x in G.ElInd:
+                if x==G.identity_ind:
+                    continue
+                for y in G.ElInd:
+                    if y==G.identity_ind:
+                        continue
+                    if G.has_generating_set([x,y]):
+                        return [x,y]
+            print("This shouldn't be happening")
         n = N.MinimalGeneratingSet()
         if debug:
             print("n :\n",n)
@@ -542,16 +615,15 @@ class Coset:
     def standardise(self):
         self.g_ind = min(self.expand())
 
-def AdditiveGroupOnIntegersModulo(n):
+def AdditiveGroupOnIntegersModulo(n:int)->Group:
     T = array([
         [(i+j)%n for j in range(n)]
         for i in range(n)
     ])
-    names = [str(i) for i in range(n)]
+    names = [i for i in range(n)]
     R = Relation(T,names)
     return Group(R)
-
-def DihegralGroup(n):
+def DihegralGroup(n:int)->Group:
     names = ['e']+[f'r^{i}' for i in range(1,n)] + ['s']+[f'sr^{i}' for i in range(1,n)]
     T = [[None]*(2*n) for _ in range(2*n)]
     for i in range(2*n):
@@ -569,8 +641,7 @@ def DihegralGroup(n):
     T = array(T,dtype=int32)
     R = Relation(T,names,True)
     return Group(R)
-
-def generatePermuations(n):
+def generatePermuations(n:int)->list:
     """
     Generates permutations of numbers 0,1,...n-1 in increasing lexicographical order
     """
@@ -597,8 +668,7 @@ def generatePermuations(n):
 
     assert None not in L
     return L
-
-def perutationIndex(p,facts):
+def perutationIndex(p:int,facts:list):
     """
     facts is a list containing factorials of numbers 0,1,...n-1 where n = len(p)
     """
@@ -615,13 +685,14 @@ def perutationIndex(p,facts):
             elif p[j] == p[i]:
                 raise ValueError(str((p[j],p[i],j,i)))
     return I
-
 def multiplyPermutations(x,y):
+    """
+    returns xy where x and y are permutations of same size
+    """
     assert len(x) == len(y)
     z = [y[i] for i in x]
     return z
-
-def PermutationGroup(n):
+def PermutationGroup(n:int)->Group:
     """
     generates S(n)
     """
@@ -632,23 +703,70 @@ def PermutationGroup(n):
     P = generatePermuations(n)
     P = [tuple(x) for x in P]
     l = len(P)
-    D = {P[i]:i for i in range(l)}
+    #D = {P[i]:i for i in range(l)}
     T = [[None]*l for _ in range(l)]
     for i in range(l):
         for j in range(l):
             x = P[i]
             y = P[j]
             z = multiplyPermutations(x,y)
-            #zind = perutationIndex(z,facts)
-            zind = D[z]
+            zind = perutationIndex(z,facts)
+            #zind = D[z]
             T[i][j] = zind
     T = array(T)
     R = Relation(T,["["+"".join([str(x) for x in p])+']' for p in P])
     G = Group(R)
     return G
-
+def AlternatingGroup(n:int)->Group:
+    P = PermutationGroup(n)
+    A = P.MinimalNormalSubGroup()
+    assert len(P) == 2*len(A)
+    return A
+def RelationFromElements(L:list,group_op=lambda x,y:x*y)->Relation:
+    """
+    L:list of group elements
+    group_op: Group operation over these elements. 
+    """
+    n = len(L)
+    T = [[None]*n for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            x = L[i]
+            y = L[j]
+            xy = group_op(x,y)
+            xyi = L.index(xy)
+            T[i][j] = xyi
+    T = array(T)
+    R = Relation(T,L)
+    return R
+def TableGroupFromElements(L:list,group_op=lambda x,y:x*y)->Group:
+    R = RelationFromElements(L,group_op)
+    G = Group(R)
+    return G
 
 if __name__=='__main__':
+    from matplotlib.pyplot import *
+    from time import time
+    G0 = AdditiveGroupOnIntegersModulo(2)
+    N = 6
+    iterations = 3
+    G = G0
+    L = []
+    for n in range(1,N+1):
+        t0 = time()
+        for i in range(iterations):
+            g = G.MinimumGeneratingSet()
+        t = time()
+        dt = (t-t0)/iterations
+        L.append(dt)
+        print([G.R[x] for x in g])
+        if n!=N:
+            G = G.Cross(G0)
+    L = array(L)
+    L = log(L)
+    plot([2**n for n in range(1,N+1)],L)
+    show()
+    exit()
     G = DihegralGroup(3)
     print("Relation :")
     print(G.R,'\n')
