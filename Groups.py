@@ -425,28 +425,23 @@ class Group:
         for g in self.ElInd:
             if visited[g]:
                 continue
-            Changes = 0
-            while True:
-                changes = 0
-                for x in self.ElInd:
-                    if not visited[x]:
-                        continue
-                    gx = T[g][x]
-                    if not visited[gx]:
-                        visited[gx] = True 
-                        changes += 1
-                Changes += changes
-                if not changes:
-                    break
-            if Changes:
-                generators.append(g)
-            done = True
+            gps = []
+            x = g
+            while not visited[x]:
+                gps.append(x)
+                x = T[x][g]
             for x in self.ElInd:
                 if not visited[x]:
-                    done = False
-                    break
-            if done:
-                break
+                    continue
+                for y in self.ElInd:
+                    if not visited[y]:
+                        continue
+                    for gp in gps:
+                        gx = T[gp][x]
+                        ygx = T[y][gx]
+                        if not visited[ygx]:
+                            visited[ygx] = True 
+            generators.append(g)
         return generators      
     def order(self,i:int):
         G = self
@@ -821,3 +816,4 @@ if __name__=='__main__':
     print("Output :",g)
     if g is not None:
         print("Pretty Output :",",".join([str(G.R[i]) for i in g]))
+
