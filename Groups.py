@@ -56,10 +56,11 @@ class Relation:
             print("Relation doesn't have an identity")
             return
         self.inv_ind = get_inverses(self,self.identity_ind)
-    def generate(self,generators,check=True):
+    def generate(self,generators,check=True,ret_vis=False,visited=None):
         T=self.T
         n = T.shape[0]
-        visited = [False]*n
+        if visited is None:
+            visited = [False]*n
         visited[self.identity_ind] = True
         while True:
             changes = 0
@@ -76,6 +77,8 @@ class Relation:
                         changes += 1
             if not changes:
                 break
+        if ret_vis:
+            return visited
         L = [i for i in range(n) if visited[i]]
         try:
             G = Group(self,L,check)
@@ -415,7 +418,9 @@ class Group:
                     ToDo = ToDoNew
                     break
             return N      
-    def MinimalGeneratingSet(self)->list:
+    def GeneratingSet(self)->list:
+        if len(self.ElInd)==1:
+            return self.ElInd
         R = self.R
         T=R.T
         n = T.shape[0]
@@ -425,24 +430,36 @@ class Group:
         for g in self.ElInd:
             if visited[g]:
                 continue
-            gps = []
-            x = g
-            while not visited[x]:
-                gps.append(x)
-                x = T[x][g]
-            for x in self.ElInd:
-                if not visited[x]:
-                    continue
-                for y in self.ElInd:
-                    if not visited[y]:
-                        continue
-                    for gp in gps:
-                        gx = T[gp][x]
-                        ygx = T[y][gx]
-                        if not visited[ygx]:
-                            visited[ygx] = True 
             generators.append(g)
-        return generators      
+            visited = R.generate(generators,False,True,visited)
+            #gps = []
+            #x = g
+            #while not visited[x]:
+            #    gps.append(x)
+            #    x = T[x][g]
+            #for x in self.ElInd:
+            #    if not visited[x]:
+            #        continue
+            #    for y in self.ElInd:
+            #        if not visited[y]:
+            #            continue
+            #        for gp in gps:
+            #            gx = T[gp][x]
+            #            ygx = T[y][gx]
+            #            if not visited[ygx]:
+            #                visited[ygx] = True 
+        return generators    
+    def MinimalGeneratingSet(self,gen=None):
+        if gen is None:
+            gen = self.GeneratingSet()
+        i = 0
+        while i < len(gen):
+            genn = gen[:i]+gen[i+1:]
+            if self.has_generating_set(genn):
+                gen = genn
+            else:
+                i += 1
+        return gen
     def order(self,i:int):
         G = self
         I = i
@@ -535,7 +552,7 @@ class Group:
         if len(G) == 1:
             if debug:
                 print("G has only identity")
-            return []
+            return G.ElInd
         if debug:
             print("Finding minimum generating set for :\n",self)
         g = G.cyclic_generator()
