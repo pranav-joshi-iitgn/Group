@@ -29,7 +29,7 @@ We wanted to add this whole library to Sage, but many functions we wrote were ta
 
 Meanwhile, we were constantly asking around in the Sage community for help so that we could complete the old (Sage) implementation, and luckily, we found what we needed, so we continued with the old implementation because it was using highly optimized functions from Sage and GAP.
 
-We then timed the function and found that it was indeed polynomial time in $ |G| $. We found this by fitting logarithmic curves to the plot of $ \ln (t) $ vs $ |G|$, where $ t $ is the time taken from the algorithm in seconds.
+We then timed the function and found that it was indeed polynomial time in |G|. We found this by fitting logarithmic curves to the plot of ln (t) vs |G|, where t is the time taken from the algorithm in seconds.
 <table>
 <tr>
 <td><img src=Plots/Figure_1.png></td>
