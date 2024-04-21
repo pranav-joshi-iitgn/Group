@@ -1,3 +1,4 @@
+$$
 \begin{matrix}Group Type & \text{len}(G) & \text{len}(\text{mingen}(G)) & \text{mingen}(g)\\
 H(n,2) & 32 & 4 & \text{too long to write}\\
 H(n,2) & 128 & 6 & \text{too long to write}\\
@@ -202,3 +203,4 @@ A_5^n & 2799360000000 & 2 & \text{too long to write}\\
 A_5^n & 167961600000000 & 2 & \text{too long to write}\\
 A_5^n & 10077696000000000 & 2 & \text{too long to write}\\
 \end{matrix}
+$$
