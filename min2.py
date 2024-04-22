@@ -103,12 +103,11 @@ def lift(G_by_Gim1_mingen_reps,
             if debug : print("returning {g1n1,g2n2...glnl}")
             return raw_gens
 
-    for raw_gens in gen_combinations(g, N_list, l):
-        for nl in N_list[1:]:
-            if is_Qgroup_by_reps(old_G_phi,old_G,raw_gens+[nl]):
-                if debug : print("returning {g1n1,g2n2...glnl,n_{l+1}}")
-                return raw_gens + [nl]
-    if debug : print("This stage shouldn't ever be reached.")
+    for raw_gens in gen_combinations(g+[N_list[0]], N_list, l+1):
+        if is_Qgroup_by_reps(old_G_phi,old_G,raw_gens):
+            if debug : print("returning {g1n1,g2n2...glnl,n_{l+1}}")
+            return raw_gens #+ [nl]
+    if debug : assert False ,("This stage shouldn't ever be reached.")
 
 def LIFT(cs,j,i,mingenset_j_reps=None,debug=False):
     """
@@ -348,4 +347,3 @@ def mingtest():
         print(len(g))
         if i < n-1:
             G = G.DirectProduct(A5)
-
