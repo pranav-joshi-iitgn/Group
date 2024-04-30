@@ -18,7 +18,6 @@ def Quot(G,N):
     phi = G.NaturalHomomorphismByNormalSubgroup(N)
     GbyN = phi.ImagesSource()
     return GbyN,phi
-
 def QuotElemNSmallGensReps(G,N):
     GbyN,phi = Quot(G,N)
     elems = list(GbyN.AsList())
@@ -26,28 +25,23 @@ def QuotElemNSmallGensReps(G,N):
     gens = Phinv(gens,phi)
     elems = Phinv(elems,phi)
     return GbyN,elems,gens,phi
-
 def Phinv(elem,phi):
     if isinstance(elem,list):
         return [phi.PreImagesRepresentative(x) for x in elem]
     return phi.PreImagesRepresentative(elem)
-
 def Phi(g,phi):
     if isinstance(g,list):
         return [phi.ImagesRepresentative(x) for x in g]
     return phi.ImagesRepresentative(g)
-
 def is_group_by_gens(group, gens):
     G = libgap.GroupByGenerators(gens)
     return group == G
-
 def is_Qgroup_by_reps(phi,GbyN,reps): return (GbyN == libgap.GroupByGenerators([phi.ImagesRepresentative(x) for x in reps]))
 
 def lift(G_by_Gim1_mingen_reps,
          Gim1_by_Gi,
          G_by_Gi,
          phi_G_by_Gi,
-         #phi_G_by_Gim1,
          phi_Gim1_by_Gi,
          debug=False
          ):
@@ -92,7 +86,6 @@ def lift(G_by_Gim1_mingen_reps,
     if debug : print("n",n)
 
     if N.IsAbelian().sage():
-        #if is_Qgroup_by_reps(old_G_phi,old_G,g):
         if (old_G == libgap.GroupByGenerators([old_G_phi.ImagesRepresentative(x) for x in g])):
             if debug : print("unmodified g works")
             return g
@@ -116,8 +109,143 @@ def lift(G_by_Gim1_mingen_reps,
     for raw_gens in gen_combinations(g+[N_list[0]], N_list, l+1):
         if (old_G == libgap.GroupByGenerators([old_G_phi.ImagesRepresentative(x) for x in raw_gens])):
             if debug : print("returning {g1n1,g2n2...glnl,n_{l+1}}")
-            return raw_gens #+ [nl]
+            return raw_gens
     if debug : assert False ,("This stage shouldn't ever be reached.")
+def minimum_generating_set(G,debug=False)->list:
+    assert isinstance(G, GapElement)
+    if not G.IsFinite().sage(): raise NotImplementedError("only implemented for finite groups")
+    try:return list(libgap.MinimalGeneratingSet(G))
+    except:pass
+    cs = G.ChiefSeries()
+    l = len(cs)-1
+
+    #gens = LIFT(cs,1,l)
+    i = l
+    j = 1
+    """
+    LIFT
+    'cs' is the chief series [G0,G1,G2...]
+
+    Given the representatives of minimum generating set for G/Gj ,
+    this function finds the representatives of the minimum generating set of G/Gi
+    where i > j
+    """
+
+    def lift(G_by_Gim1_mingen_reps,
+             Gim1_by_Gi,
+             G_by_Gi,
+             phi_G_by_Gi,
+             phi_Gim1_by_Gi,
+             debug=False
+             ):
+        """
+            G_by_Gim1 = G / G_{i-1}
+            Gim1_by_Gi = G_{i-1} / G_{i}
+            phi_G_by_Gi is the homomorphism defining the cosets of Gi in G. We use this to find g_j G_i
+            We want to find mingen of G / G_{i} by lifting GbyGim1 with Gim1byGi
+        """
+
+        g = G_by_Gim1_mingen_reps
+        if debug : print("g :",g)
+
+        l = len(g)
+        if debug : print("l :",l)
+
+        old_G_phi = phi_G_by_Gi
+        if debug : print("old_G_phi :",old_G_phi)
+
+        old_G = G_by_Gi
+        if debug : print("old_G :",old_G)
+
+        Gim1_by_Gi_L = list(Gim1_by_Gi.AsList())
+        if debug : print("Gim1_by_Gi_L :",Gim1_by_Gi_L)
+
+        Gim1_by_Gi_elem_reps = [phi_Gim1_by_Gi.PreImagesRepresentative(x) for x in Gim1_by_Gi_L]
+        if debug : print("Gim1_by_Gi_elem_reps",Gim1_by_Gi_elem_reps)
+
+        Gim1_by_Gi_gen = list(libgap.SmallGeneratingSet(Gim1_by_Gi))
+        if debug : print("Gim1_by_Gi_gen",Gim1_by_Gi_gen)
+
+        Gim1_by_Gi_gen_reps = [phi_Gim1_by_Gi.PreImagesRepresentative(x) for x in Gim1_by_Gi_gen]
+        if debug : print("Gim1_by_Gi_gen_reps",Gim1_by_Gi_gen_reps)
+
+        N = Gim1_by_Gi
+        if debug : print("N",N)
+
+        N_list = Gim1_by_Gi_elem_reps
+        if debug : print("N_list",N_list)
+
+        n = Gim1_by_Gi_gen_reps
+        if debug : print("n",n)
+
+        if N.IsAbelian().sage():
+            if (old_G == libgap.GroupByGenerators([old_G_phi.ImagesRepresentative(x) for x in g])):
+                if debug : print("unmodified g works")
+                return g
+
+            for i in range(l):
+                for j in range(len(n)):
+                    temp = g[i]
+                    g[i] = g[i]*n[j]
+                    if (old_G == libgap.GroupByGenerators([old_G_phi.ImagesRepresentative(x) for x in g])):
+                        if debug : print("{g1,g2...gi*nj...gl} works")
+                        return g
+                    g[i] = temp
+            if debug: print("returning g U { n_0 }")
+            return g + [n[0]]
+
+        for raw_gens in gen_combinations(g, N_list, l):
+            if (old_G == libgap.GroupByGenerators([old_G_phi.ImagesRepresentative(x) for x in raw_gens])):
+                if debug : print("returning {g1n1,g2n2...glnl}")
+                return raw_gens
+
+        for raw_gens in gen_combinations(g+[N_list[0]], N_list, l+1):
+            if (old_G == libgap.GroupByGenerators([old_G_phi.ImagesRepresentative(x) for x in raw_gens])):
+                if debug : print("returning {g1n1,g2n2...glnl,n_{l+1}}")
+                return raw_gens
+        if debug : assert False ,("This stage shouldn't ever be reached.")
+
+    Gj = cs[j]
+    Gi = cs[i]
+    if debug:
+        print("G :",G )
+        print("Gi:",Gi)
+        print("Gj:",Gj)
+    phi_GbyGj = G.NaturalHomomorphismByNormalSubgroup(Gj)
+    GbyGj = phi_GbyGj.ImagesSource()
+    if debug:
+        print("GbyGj    ",GbyGj    )
+        print("phi_GbyGj",phi_GbyGj)
+    phi_GbyGi = G.NaturalHomomorphismByNormalSubgroup(Gi)
+    GbyGi = phi_GbyGi.ImagesSource()
+    if debug:
+        print("GbyGi    ",GbyGi    )
+        print("phi_GbyGi",phi_GbyGi)
+    mingenset_j = list(libgap.SmallGeneratingSet(GbyGj))
+    mingenset_j_reps = [phi_GbyGj.PreImagesRepresentative(x) for x in mingenset_j]
+
+    mingenset_k_reps = mingenset_j_reps
+    for k in range(j+1,i+1): 
+        mingenset_km1_reps = mingenset_k_reps
+        Gk = cs[k]
+        Gkm1 = cs[k-1]
+        phi_GbyGk = G.NaturalHomomorphismByNormalSubgroup(Gk)
+        GbyGk = phi_GbyGk.ImagesSource()
+        phi_Gkm1byGk = Gkm1.NaturalHomomorphismByNormalSubgroup(Gk)
+        Gkm1byGk = phi_Gkm1byGk.ImagesSource()
+        mingenset_k_reps = lift(
+            mingenset_km1_reps,
+            Gkm1byGk,
+            GbyGk,
+            phi_GbyGk,
+            phi_Gkm1byGk
+        )
+    assert (GbyGi == libgap.GroupByGenerators([phi_GbyGi.ImagesRepresentative(x) for x in mingenset_k_reps]))
+
+    gens = mingenset_k_reps
+
+    assert (G == libgap.GroupByGenerators(gens))
+    return gens 
 
 def LIFT(cs,j,i,mingenset_j_reps=None,debug=False):
     """
@@ -135,13 +263,11 @@ def LIFT(cs,j,i,mingenset_j_reps=None,debug=False):
         print("G :",G )
         print("Gi:",Gi)
         print("Gj:",Gj)
-    #GbyGj,phi_GbyGj = Quot(G,Gj)
     phi_GbyGj = G.NaturalHomomorphismByNormalSubgroup(Gj)
     GbyGj = phi_GbyGj.ImagesSource()
     if debug:
         print("GbyGj    ",GbyGj    )
         print("phi_GbyGj",phi_GbyGj)
-    #GbyGi,phi_GbyGi = Quot(G,Gi)
     phi_GbyGi = G.NaturalHomomorphismByNormalSubgroup(Gi)
     GbyGi = phi_GbyGi.ImagesSource()
     if debug:
@@ -155,12 +281,8 @@ def LIFT(cs,j,i,mingenset_j_reps=None,debug=False):
         mingenset_km1_reps = mingenset_k_reps
         Gk = cs[k]
         Gkm1 = cs[k-1]
-        #GbyGk,phi_GbyGk = Quot(G,Gk)
         phi_GbyGk = G.NaturalHomomorphismByNormalSubgroup(Gk)
         GbyGk = phi_GbyGk.ImagesSource()
-        #GbyGkm1,phi_GbyGkm1 = Quot(G,Gkm1)
-        #phi_GbyGkm1 = G.NaturalHomomorphismByNormalSubgroup(Gkm1)
-        #Gkm1byGk,phi_Gkm1byGk = Quot(Gkm1,Gk)
         phi_Gkm1byGk = Gkm1.NaturalHomomorphismByNormalSubgroup(Gk)
         Gkm1byGk = phi_Gkm1byGk.ImagesSource()
         mingenset_k_reps = lift(
@@ -168,13 +290,10 @@ def LIFT(cs,j,i,mingenset_j_reps=None,debug=False):
             Gkm1byGk,
             GbyGk,
             phi_GbyGk,
-            #phi_GbyGkm1,
             phi_Gkm1byGk
         )
-    #assert is_Qgroup_by_reps(phi_GbyGi,GbyGi,mingenset_k_reps)
     assert (GbyGi == libgap.GroupByGenerators([phi_GbyGi.ImagesRepresentative(x) for x in mingenset_k_reps]))
     return mingenset_k_reps
-
 def LIFT_TEST():
     D = DihedralGroup(3).gap()
     D2 = D.DirectProduct(D)
@@ -185,18 +304,6 @@ def LIFT_TEST():
     print("l :",l)
     gens = LIFT(cs,1,l-1)
     print("gens :",gens)
-
-def minimum_generating_set(G)->list:
-    assert isinstance(G, GapElement)
-    if not G.IsFinite().sage(): raise NotImplementedError("only implemented for finite groups")
-    try:return list(libgap.MinimalGeneratingSet(G))
-    except:pass
-    cs = G.ChiefSeries()
-    l = len(cs)-1
-    gens = LIFT(cs,1,l)
-    assert (G == libgap.GroupByGenerators(gens))
-    return gens 
-
 def lift_test():
     G = DihedralGroup(4).gap()
     print("G :",G)
@@ -221,7 +328,6 @@ def lift_test():
         G1byG2,
         G0byG2,
         G0byG2_phi,
-        #G0byG1_phi,
         G1byG2_phi,
         True
     )
