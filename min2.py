@@ -202,11 +202,8 @@ def lift_test():
         G0byG2,
         G0byG2_phi,
         G1byG2_phi,
-        True
     )
-    reps = [G0byG2_phi.PreImagesRepresentative(x) for x in gens]
     print("gens :",gens)
-    print("reps :",reps)
     print("Works :",is_Qgroup_by_reps(G0byG2_phi,G0byG2,gens))
 def test_mingen():
     A5 = AlternatingGroup(5).gap()
@@ -434,12 +431,11 @@ def minimum_generating_set(G,debug=False,report_time=False)->list:
             t0 = t
             print(f"lift to get mingenset_{k}_reps:",dt)
     assert (GbyGi == libgap.GroupByGenerators([phi_GbyGi.ImagesRepresentative(x) for x in mingenset_k_reps]))
-    
+
     gens = mingenset_k_reps
 
     assert (G == libgap.GroupByGenerators(gens))
     return gens 
-
 MGS = minimum_generating_set
 
 def TAP():
