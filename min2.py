@@ -263,14 +263,14 @@ def A_5_to_n(n):
         G = G.DirectProduct(A5)
     return G
 
-def minimum_generating_set(G,debug=False)->list:
+def minimum_generating_set(G,debug=False,report_time=False)->list:
     assert isinstance(G, GapElement)
     if not G.IsFinite().sage(): raise NotImplementedError("only implemented for finite groups")
     try:return list(libgap.MinimalGeneratingSet(G))
     except:pass
     cs = G.ChiefSeries()
     l = len(cs)-1
-
+    if report_time : t0 = time()
     #gens = LIFT(cs,1,l)
     i = l
     j = 1
@@ -376,17 +376,32 @@ def minimum_generating_set(G,debug=False)->list:
         print("Gj:",Gj)
     phi_GbyGj = G.NaturalHomomorphismByNormalSubgroup(Gj)
     GbyGj = phi_GbyGj.ImagesSource()
+    if report_time :
+        t = time()
+        dt = t- t0
+        t0 = t
+        print("GbyG1:",dt)
     if debug:
         print("GbyGj    ",GbyGj    )
         print("phi_GbyGj",phi_GbyGj)
+    
     phi_GbyGi = G.NaturalHomomorphismByNormalSubgroup(Gi)
     GbyGi = phi_GbyGi.ImagesSource()
+    if report_time :
+        t = time()
+        dt = t- t0
+        t0 = t
+        print("GbyGl:",dt)
     if debug:
         print("GbyGi    ",GbyGi    )
         print("phi_GbyGi",phi_GbyGi)
     mingenset_j = list(libgap.SmallGeneratingSet(GbyGj))
     mingenset_j_reps = [phi_GbyGj.PreImagesRepresentative(x) for x in mingenset_j]
-
+    if report_time :
+        t = time()
+        dt = t- t0
+        t0 = t
+        print("mingenset_j_reps:",dt)
     mingenset_k_reps = mingenset_j_reps
     for k in range(j+1,i+1): 
         mingenset_km1_reps = mingenset_k_reps
@@ -394,8 +409,18 @@ def minimum_generating_set(G,debug=False)->list:
         Gkm1 = cs[k-1]
         phi_GbyGk = G.NaturalHomomorphismByNormalSubgroup(Gk)
         GbyGk = phi_GbyGk.ImagesSource()
+        if report_time :
+            t = time()
+            dt = t- t0
+            t0 = t
+            print(f"GbyG{k}:",dt)
         phi_Gkm1byGk = Gkm1.NaturalHomomorphismByNormalSubgroup(Gk)
         Gkm1byGk = phi_Gkm1byGk.ImagesSource()
+        if report_time :
+            t = time()
+            dt = t- t0
+            t0 = t
+            print(f"G{k-1}byG{k}:",dt)
         mingenset_k_reps = lift(
             mingenset_km1_reps,
             Gkm1byGk,
@@ -403,8 +428,13 @@ def minimum_generating_set(G,debug=False)->list:
             phi_GbyGk,
             phi_Gkm1byGk
         )
+        if report_time :
+            t = time()
+            dt = t- t0
+            t0 = t
+            print(f"lift to get mingenset_{k}_reps:",dt)
     assert (GbyGi == libgap.GroupByGenerators([phi_GbyGi.ImagesRepresentative(x) for x in mingenset_k_reps]))
-
+    
     gens = mingenset_k_reps
 
     assert (G == libgap.GroupByGenerators(gens))
